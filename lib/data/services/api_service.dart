@@ -1,21 +1,30 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'settings_service.dart';
 
 class ApiService {
+  static final ApiService _instance = ApiService._internal();
   late Dio _dio;
-  // static const String baseUrl = 'http://10.250.70.138:8080/api/v1';
-  static const String baseUrl = 'http://192.168.29.103:8080/api/v1';
+  bool _initialized = false;
 
-  ApiService() {
+  factory ApiService() {
+    return _instance;
+  }
+
+  ApiService._internal() {
     _dio = Dio(BaseOptions(
-      baseUrl: baseUrl,
       connectTimeout: const Duration(seconds: 5),
       receiveTimeout: const Duration(seconds: 3),
     ));
 
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
+        // Ensure Base URL is loaded
+        if (options.baseUrl.isEmpty || options.baseUrl == 'http://localhost') {
+          options.baseUrl = await SettingsService.getBaseUrl();
+        }
+
         final prefs = await SharedPreferences.getInstance();
         final token = prefs.getString('access_token');
         if (token != null) {
@@ -26,6 +35,12 @@ class ApiService {
     ));
 
     _dio.interceptors.add(LoggingInterceptor());
+  }
+
+  /// Force refresh the Dio instance with the latest Base URL
+  void reset() {
+    _initialized = false;
+    _dio.options.baseUrl = ''; // Trigger reload on next request
   }
 
   Future<void> _saveToken(String token) async {
@@ -156,8 +171,7 @@ class ApiService {
       }).where((text) => text.isNotEmpty);
     } catch (e) {
       // Mock streaming for development following SSE format
-      const mockResponse =
-          "Service is down. Please try again later.";
+      const mockResponse = "Service is down. Please try again later.";
       final chunks = mockResponse.split(' ');
       for (final chunk in chunks) {
         await Future.delayed(const Duration(milliseconds: 100));

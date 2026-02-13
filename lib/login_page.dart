@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:blue_ribbon/utils/toast_utils.dart';
 import 'package:blue_ribbon/bloc/login/login_bloc.dart';
 import 'package:blue_ribbon/data/repositories/authentication_repository.dart';
+import 'package:blue_ribbon/server_settings_page.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -10,6 +11,22 @@ class LoginPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings, color: Colors.blue),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const ServerSettingsPage()),
+              );
+            },
+          ),
+        ],
+      ),
       body: BlocProvider(
         create: (context) {
           return LoginBloc(

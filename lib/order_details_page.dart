@@ -130,17 +130,23 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     final String geoUrl = "geo:0,0?q=$query";
 
     try {
-      if (await canLaunchUrl(Uri.parse(geoUrl))) {
-        await launchUrl(Uri.parse(geoUrl));
-      } else if (await canLaunchUrl(Uri.parse(googleMapsUrl))) {
-        await launchUrl(Uri.parse(googleMapsUrl),
-            mode: LaunchMode.externalApplication);
-      } else if (await canLaunchUrl(Uri.parse(appleMapsUrl))) {
-        await launchUrl(Uri.parse(appleMapsUrl));
-      } else {
-        // Fallback: try to launch directly
-        await launchUrl(Uri.parse(googleMapsUrl),
-            mode: LaunchMode.externalApplication);
+      // Try to launch geo URL first (often opens native map app)
+      if (await launchUrl(Uri.parse(geoUrl))) {
+        return;
+      }
+      // If geo URL fails, try Google Maps
+      if (await launchUrl(Uri.parse(googleMapsUrl))) {
+        return;
+      }
+      // If Google Maps fails, try Apple Maps
+      if (await launchUrl(Uri.parse(appleMapsUrl))) {
+        return;
+      }
+      // If all attempts fail
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Could not open any map application.")),
+        );
       }
     } catch (e) {
       if (mounted) {
