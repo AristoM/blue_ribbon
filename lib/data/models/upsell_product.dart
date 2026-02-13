@@ -4,8 +4,9 @@ class UpsellProduct {
   final String imageUrl;
   final String type;
   final String category;
-  final double
-      price; // Changed to double to handle potentially floating point prices
+  final double price;
+  final double? strikeThroughPrice;
+  final String shareLink;
 
   UpsellProduct({
     required this.sku,
@@ -14,6 +15,8 @@ class UpsellProduct {
     required this.type,
     required this.category,
     required this.price,
+    this.strikeThroughPrice,
+    required this.shareLink,
   });
 
   factory UpsellProduct.fromJson(Map<String, dynamic> json) {
@@ -23,9 +26,9 @@ class UpsellProduct {
       imageUrl: json['image_url'] ?? '',
       type: json['type'] ?? '',
       category: json['category'] ?? '',
-      price: (json['price'] is int)
-          ? (json['price'] as int).toDouble()
-          : (json['price'] as double),
+      price: (json['price'] as num?)?.toDouble() ?? 0.0,
+      strikeThroughPrice: (json['strike_through_price'] as num?)?.toDouble(),
+      shareLink: json['share_link'] ?? '',
     );
   }
 }

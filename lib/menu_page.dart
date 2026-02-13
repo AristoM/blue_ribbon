@@ -1,7 +1,6 @@
 import 'package:blue_ribbon/bloc/auth/auth_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'in_app_notification_page.dart';
 
 class MenuPage extends StatelessWidget {
   const MenuPage({super.key});
@@ -16,27 +15,6 @@ class MenuPage extends StatelessWidget {
           child: Text(
             "Account & Settings",
             style: Theme.of(context).textTheme.headlineSmall,
-          ),
-        ),
-        Card(
-          margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-          child: ListTile(
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            leading:
-                const Icon(Icons.notifications_active, color: Colors.orange),
-            title: Text(
-              'Simulate Notification',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => const InAppNotificationPage()),
-              );
-            },
           ),
         ),
         Card(

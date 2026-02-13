@@ -72,8 +72,8 @@ class _HomePageState extends State<HomePage> {
           indicatorColor: Colors.transparent,
           destinations: const <NavigationDestination>[
             NavigationDestination(
-              icon: Icon(Icons.build_outlined),
-              selectedIcon: Icon(Icons.build, color: Colors.black),
+              icon: Icon(Icons.home),
+              selectedIcon: Icon(Icons.home_filled, color: Colors.black),
               label: 'Home',
             ),
             NavigationDestination(

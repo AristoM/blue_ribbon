@@ -146,8 +146,8 @@ class VoiceChatBloc extends Bloc<VoiceChatEvent, VoiceChatState> {
     emit(state.copyWith(currentTranscript: event.transcript));
     if (event.isFinal && event.transcript.isNotEmpty) {
       print('VoiceChatBloc: Final transcript received: ${event.transcript}');
-      add(SendMessageEvent(
-          event.transcript, 'JOB-2026-5678')); // Using mock JobID
+      add(SendMessageEvent(event.transcript,
+          '1aca6967-a44e-4cda-a24f-9f4919a1a966')); // Using mock JobID
     }
   }
 
@@ -198,6 +198,7 @@ class VoiceChatBloc extends Bloc<VoiceChatEvent, VoiceChatState> {
           isUser: false,
           timestamp: DateTime.now(),
         )),
+      currentAiResponse: '', // Clear streaming response once permanent
     ));
     add(StartSpeakingEvent(fullResponse));
   }

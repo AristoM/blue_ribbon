@@ -17,7 +17,7 @@ final class LoginState extends Equatable {
   bool get isValid => email.isNotEmpty && password.isNotEmpty;
 
   const LoginState({
-    this.email = 'tech-01@example.com',
+    this.email = 'test@example.com',
     this.password = 'samsung@135',
     this.status = LoginStatus.initial,
     this.errorMessage,

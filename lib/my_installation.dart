@@ -38,7 +38,7 @@ class _MyInstallationState extends State<MyInstallation> {
         });
       } else {
         setState(() {
-          _error = "Failed to load upcoming orders";
+          _error = "Failed to load upcoming jobs";
           _isLoading = false;
         });
       }
@@ -58,7 +58,7 @@ class _MyInstallationState extends State<MyInstallation> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
           child: Text(
-            "Upcoming Orders",
+            "Upcoming Jobs",
             style: Theme.of(context).textTheme.headlineSmall,
           ),
         ),
@@ -76,7 +76,7 @@ class _MyInstallationState extends State<MyInstallation> {
         else if (_upcomingOrders.isEmpty)
           const Padding(
             padding: EdgeInsets.all(24.0),
-            child: Text("No upcoming orders."),
+            child: Text("No upcoming jobs."),
           )
         else
           ..._upcomingOrders.map((order) => InkWell(
@@ -84,7 +84,7 @@ class _MyInstallationState extends State<MyInstallation> {
                   final result = await Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => OrderDetailsPage(orderId: order.id),
+                      builder: (context) => OrderDetailsPage(jobId: order.jobId),
                     ),
                   );
                   if (result == true) {

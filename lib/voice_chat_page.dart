@@ -194,7 +194,7 @@ class _VoiceChatPageState extends State<VoiceChatPage>
 
     try {
       final response =
-          await ApiService().sendChatMessage(message, "CONV-JOB-001");
+          await ApiService().sendChatMessage(message);
 
       if (!mounted) return;
 

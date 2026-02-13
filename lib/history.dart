@@ -15,14 +15,14 @@ class History extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
           child: Text(
-            "Past Orders",
+            "Past Jobs",
             style: Theme.of(context).textTheme.headlineSmall,
           ),
         ),
         if (pastOrders.isEmpty)
           const Padding(
             padding: EdgeInsets.all(24.0),
-            child: Text("No past orders."),
+            child: Text("No past jobs."),
           )
         else
           ...pastOrders.map((order) => Card(

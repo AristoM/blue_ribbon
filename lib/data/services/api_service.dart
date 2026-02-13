@@ -4,7 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   late Dio _dio;
-  static const String baseUrl = 'http://10.250.70.138:8080/api/v1';
+  // static const String baseUrl = 'http://10.250.70.138:8080/api/v1';
+  static const String baseUrl = 'http://192.168.29.103:8080/api/v1';
 
   ApiService() {
     _dio = Dio(BaseOptions(
@@ -71,29 +72,26 @@ class ApiService {
     return await _dio.get('/technician/my-jobs');
   }
 
-  Future<Response> getOrderDetails(String orderId) async {
-    return await _dio.get('/orders/$orderId');
+  Future<Response> getJobDetails(String jobId) async {
+    return await _dio.get('/technician/jobs/$jobId');
   }
 
-  Future<Response> sendChatMessage(
-      String message, String conversationId) async {
+  Future<Response> sendChatMessage(String message) async {
     try {
-      return await _dio.post('/chat/job/JOB-2026-5678', data: {
-        'message': message,
-        'conversation_id': conversationId,
-      });
+      return await _dio.post('/chat/job/1aca6967-a44e-4cda-a24f-9f4919a1a966',
+          data: {'message': message});
     } catch (e) {
       // Mocking the API call locally
       await Future.delayed(const Duration(seconds: 2));
 
       return Response(
-        requestOptions: RequestOptions(path: '/chat/job/JOB-2026-5678'),
+        requestOptions: RequestOptions(
+            path: '/chat/job/1aca6967-a44e-4cda-a24f-9f4919a1a966'),
         statusCode: 200,
         data: {
           "success": true,
           "data": {
-            "job_id": "JOB-2026-5678",
-            "conversation_id": conversationId,
+            "job_id": "1aca6967-a44e-4cda-a24f-9f4919a1a966",
             "message_id": "MSG-AI-002",
             "response":
                 "For the LG 500L Refrigerator you're installing, the manual specifies:\n\n• Minimum 2 inches (5cm) clearance on both sides",
@@ -134,16 +132,37 @@ class ApiService {
         options: Options(responseType: ResponseType.stream),
       );
 
-      final stream = response.data.stream as Stream<List<int>>;
-      yield* stream.map((chunk) => utf8.decode(chunk));
+      final stream = (response.data.stream as Stream).cast<List<int>>();
+      yield* stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())
+          .where((line) => line.startsWith('data: '))
+          .map((line) {
+        final data = line.substring(6).trim();
+        if (data.contains('[DONE]')) return '';
+        try {
+          final decoded = jsonDecode(data);
+          if (decoded is Map && decoded.containsKey('response')) {
+            return decoded['response'] as String;
+          } else if (decoded is Map && decoded.containsKey('text')) {
+            return decoded['text'] as String;
+          } else if (decoded is Map && decoded.containsKey('content')) {
+            return decoded['content'] as String;
+          }
+          return data;
+        } catch (_) {
+          return data;
+        }
+      }).where((text) => text.isNotEmpty);
     } catch (e) {
-      // Mock streaming for development
-      final mockResponse =
-          "To properly level the LG refrigerator, you should adjust the leveling legs at the front base. Rotate them clockwise to raise and counter-clockwise to lower. Ensure a slight backward tilt so the doors close automatically.";
+      // Mock streaming for development following SSE format
+      const mockResponse =
+          "Service is down. Please try again later.";
       final chunks = mockResponse.split(' ');
       for (final chunk in chunks) {
         await Future.delayed(const Duration(milliseconds: 100));
-        yield "$chunk ";
+        yield "data: $chunk ".substring(
+            6); // Yielding just the content as the real stream map does
       }
     }
   }

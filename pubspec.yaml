@@ -45,6 +45,8 @@ dependencies:
   animate_do: ^4.2.0
   flutter_animate: ^4.5.2
   status_bar_control: ^3.2.1
+  share_plus: ^10.1.4
+  url_launcher: ^6.3.1
 
 dev_dependencies:
   flutter_test:

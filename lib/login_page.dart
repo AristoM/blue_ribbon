@@ -10,10 +10,6 @@ class LoginPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Sign In'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-      ),
       body: BlocProvider(
         create: (context) {
           return LoginBloc(
