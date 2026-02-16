@@ -58,12 +58,14 @@ class _HomePageState extends State<HomePage> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(
-          forceMaterialTransparency: true,
-          title: Text(
-            _titles[_selectedIndex],
-          ),
-        ),
+        appBar: _selectedIndex == 0
+            ? null
+            : AppBar(
+                forceMaterialTransparency: true,
+                title: Text(
+                  _titles[_selectedIndex],
+                ),
+              ),
         body: _widgetOptions.elementAt(_selectedIndex),
         bottomNavigationBar: NavigationBar(
           selectedIndex: _selectedIndex,

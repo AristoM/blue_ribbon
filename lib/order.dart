@@ -318,12 +318,15 @@ class Order {
   final String id;
   final String orderId;
   final String? jobId;
+  final String? historyId;
   final String status;
+  final String? action;
+  final String jobStatus;
   final LineItem lineItem;
   final Customer customer;
   final Location location;
   final Questionnaire questionnaire;
-  final DateTime scheduledTime;
+  final String scheduledTime;
   final Technician technician;
   final Map<String, dynamic> customerNotes;
   final Tracking tracking;
@@ -331,13 +334,17 @@ class Order {
   final Payment payment;
   final int estimatedDurationHours;
   final DateTime? assignedAt;
+  final double? paymentAmount;
   bool isPast;
 
   Order({
     required this.id,
     required this.orderId,
     this.jobId,
+    this.historyId,
     required this.status,
+    this.action,
+    required this.jobStatus,
     required this.lineItem,
     required this.customer,
     required this.location,
@@ -350,6 +357,7 @@ class Order {
     required this.payment,
     required this.estimatedDurationHours,
     this.assignedAt,
+    this.paymentAmount,
     this.isPast = false,
   });
 
@@ -361,16 +369,15 @@ class Order {
         id: (json['job_id'] ?? json['order_id'] ?? '').toString(),
         orderId: (json['order_id'] ?? '').toString(),
         jobId: json['job_id']?.toString(),
+        historyId: json['history_id']?.toString(),
         status: (json['status'] ?? 'PENDING').toString(),
+        action: json['action']?.toString(),
+        jobStatus: (json['job_status'] ?? 'PENDING').toString(),
         lineItem: LineItem.fromJson(json['line_item'] ?? {}),
         customer: Customer.fromJson(json['customer'] ?? {}),
         location: Location.fromJson(json['location'] ?? {}),
         questionnaire: Questionnaire.fromJson(json['questionnaire'] ?? {}),
-        scheduledTime: (json['scheduled_time'] != null &&
-                json['scheduled_time'].toString().isNotEmpty)
-            ? (DateTime.tryParse(json['scheduled_time'].toString()) ??
-                DateTime.now())
-            : DateTime.now(),
+        scheduledTime: (json['scheduled_time'] ?? '').toString(),
         technician: json['technician'] != null
             ? Technician.fromJson(json['technician'])
             : json['assigned_technician'] != null
@@ -408,134 +415,14 @@ class Order {
         assignedAt: json['assigned_at'] != null
             ? (DateTime.tryParse(json['assigned_at'].toString()))
             : null,
-        isPast: (json['status'] == 'COMPLETED'),
+        paymentAmount: (json['payment_amount'] as num?)?.toDouble(),
+        isPast: (json['job_status'] == 'COMPLETED'),
       );
     } catch (e, stack) {
       print('Error parsing Order: $e');
       print('Stacktrace: $stack');
       print('Failed JSON: $json');
       rethrow;
-    }
-  }
-}
-
-class OrderRepository {
-  static final List<Order> _orders = [
-    Order(
-      id: "ORD-2026-001234",
-      orderId: "ORD-2026-001234",
-      status: "IN_PROGRESS",
-      lineItem: LineItem(
-        sku: "FRIDGE-LG-500L",
-        displayName: "LG 500L Refrigerator",
-        imageUrl: "https://cdn.example.com/products/fridge-lg-500l.jpg",
-        type: "appliance",
-        category: "appliances",
-        weightKg: 85.0,
-        dimensions: Dimensions(lengthCm: 180, widthCm: 70, depthCm: 75),
-        manualUrl: "/api/v1/manual/FRIDGE-LG-500L",
-      ),
-      customer: Customer(
-        name: "John Doe",
-        email: "john@example.com",
-        phone: "+1234567890",
-      ),
-      location: Location(
-        address: "123 Main St, San Francisco, CA 94102",
-        lat: 37.7749,
-        lng: -122.4194,
-        accessInstructions: "Ring doorbell, apartment 3B",
-      ),
-      questionnaire: Questionnaire(
-        installationLocation: "kitchen",
-        floorLevel: 1,
-        elevatorAvailable: true,
-        powerOutletAvailable: true,
-        waterConnectionAvailable: true,
-        specialRequirements: "Need to remove old fridge first",
-      ),
-      scheduledTime: DateTime.parse("2026-02-05T10:00:00Z"),
-      technician: Technician(
-        id: "TECH-001",
-        name: "Mike Johnson",
-        phone: "+1234567891",
-        rating: 4.8,
-        photoUrl: "https://cdn.example.com/techs/tech-001.jpg",
-      ),
-      customerNotes: {
-        "entrance_code": "1234",
-        "pets": true,
-        "questionnaire_answers": {}
-      },
-      tracking: Tracking(
-        currentStatus: "IN_PROGRESS",
-        progress: TrackingProgress(
-          percentage: 60,
-          currentStep: "Installation in progress",
-          stepsCompleted: ["Arrived", "Unpacking", "Positioning"],
-          stepsRemaining: ["Testing", "Walkthrough", "Completion"],
-        ),
-      ),
-      timeline: [
-        TimelineEvent(
-          status: "ORDER_CONFIRMED",
-          timestamp: DateTime.parse("2026-01-30T10:30:00Z"),
-        ),
-        TimelineEvent(
-          status: "TECHNICIAN_ASSIGNED",
-          timestamp: DateTime.parse("2026-01-30T10:35:00Z"),
-        ),
-        TimelineEvent(
-          status: "IN_PROGRESS",
-          timestamp: DateTime.parse("2026-02-05T10:00:00Z"),
-        ),
-      ],
-      payment: Payment(
-        installationFee: 150.0,
-        additionalCharges: 50.0,
-        total: 200.0,
-        status: "PENDING",
-      ),
-      estimatedDurationHours: 2,
-      assignedAt: DateTime.parse("2026-01-30T10:35:00Z"),
-    ),
-  ];
-
-  static List<Order> getUpcomingOrders() {
-    return _orders.where((order) => !order.isPast).toList();
-  }
-
-  static List<Order> getPastOrders() {
-    return _orders.where((order) => order.isPast).toList();
-  }
-
-  static void deleteOrder(String id) {
-    _orders.removeWhere((order) => order.id == id);
-  }
-
-  static void addOrder(Order order) {
-    _orders.add(order);
-  }
-
-  static void startJob(String id) {
-    final index = _orders.indexWhere((o) => o.id == id);
-    if (index != -1) {
-      // Logic for starting job
-    }
-  }
-
-  static void completeJob(String id) {
-    final index = _orders.indexWhere((o) => o.id == id);
-    if (index != -1) {
-      _orders[index].isPast = true;
-    }
-  }
-
-  static Order? getOrderById(String id) {
-    try {
-      return _orders.firstWhere((o) => o.id == id);
-    } catch (e) {
-      return null;
     }
   }
 }
