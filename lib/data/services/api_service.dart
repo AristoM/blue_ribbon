@@ -91,6 +91,10 @@ class ApiService {
     return await _dio.get('/technician/jobs/$jobId');
   }
 
+  Future<Response> getOrderDetails(String orderId) async {
+    return await _dio.get('/orders/$orderId');
+  }
+
   Future<Response> sendChatMessage(String message) async {
     try {
       return await _dio.post('/chat/job/1aca6967-a44e-4cda-a24f-9f4919a1a966',

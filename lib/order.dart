@@ -375,7 +375,8 @@ class Order {
         jobStatus: (json['job_status'] ?? 'PENDING').toString(),
         lineItem: LineItem.fromJson(json['line_item'] ?? {}),
         customer: Customer.fromJson(json['customer'] ?? {}),
-        location: Location.fromJson(json['location'] ?? {}),
+        location: Location.fromJson(
+            json['location'] ?? json['delivery_address'] ?? {}),
         questionnaire: Questionnaire.fromJson(json['questionnaire'] ?? {}),
         scheduledTime: (json['scheduled_time'] ?? '').toString(),
         technician: json['technician'] != null
@@ -389,12 +390,11 @@ class Order {
                     rating: 0,
                     photoUrl: ''),
         customerNotes: json['customer_notes'] is Map
-            ? {
-                'entrance_code':
-                    (json['customer_notes']['entrance_code'] ?? '').toString(),
-                'pets': json['customer_notes']['pets'] ?? false,
-              }
-            : {'entrance_code': '', 'pets': false},
+            ? json['customer_notes']
+            : {
+                'special_instructions':
+                    (json['customer_notes'] ?? '').toString()
+              },
         tracking: json['tracking'] != null
             ? Tracking.fromJson(json['tracking'])
             : Tracking(

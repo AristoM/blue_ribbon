@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:blue_ribbon/data/services/api_service.dart';
 import 'order.dart';
-import 'order_details_page.dart';
+import 'order_details_sheet.dart';
 
 enum JobTab { myJobs, available }
 
@@ -375,11 +375,11 @@ class _MyInstallationState extends State<MyInstallation> {
   Widget _buildMyJobCard(Order job) {
     return GestureDetector(
       onTap: () async {
-        final result = await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => OrderDetailsPage(jobId: job.jobId),
-          ),
+        final result = await showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (context) => OrderDetailsSheet(orderId: job.orderId),
         );
         if (result == true) {
           _loadOrders();
