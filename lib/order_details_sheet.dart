@@ -4,7 +4,7 @@ import 'package:blue_ribbon/order.dart';
 import 'package:blue_ribbon/data/models/upsell_product.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:blue_ribbon/advanced_voice_chat_page.dart';
+import 'package:blue_ribbon/job_chat_page.dart';
 
 class OrderDetailsSheet extends StatefulWidget {
   final String orderId;
@@ -432,7 +432,7 @@ class _OrderDetailsSheetState extends State<OrderDetailsSheet> {
                   opaque: false,
                   barrierDismissible: true,
                   pageBuilder: (context, _, __) =>
-                      AdvancedVoiceChatPage(jobId: _order!.id),
+                      JobChatPage(jobId: _order!.id),
                 ),
               );
             })),

@@ -98,20 +98,20 @@ class _AskAQuestionState extends State<AskAQuestion> {
   @override
   Widget build(BuildContext context) {
     return Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(16),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                return _buildMessageBubble(_messages[index]);
-              },
-            ),
+      children: [
+        Expanded(
+          child: ListView.builder(
+            controller: _scrollController,
+            padding: const EdgeInsets.all(16),
+            itemCount: _messages.length,
+            itemBuilder: (context, index) {
+              return _buildMessageBubble(_messages[index]);
+            },
           ),
-          _buildInputArea(),
-        ],
-      );
+        ),
+        _buildInputArea(),
+      ],
+    );
   }
 
   Widget _buildMessageBubble(ChatMessage message) {
@@ -131,7 +131,7 @@ class _AskAQuestionState extends State<AskAQuestion> {
                     topLeft: Radius.circular(16),
                     bottomLeft: Radius.circular(16),
                     bottomRight: Radius.circular(16),
-                    topRight: Radius.zero, // Pointy edge? Or just rounded
+                    topRight: Radius.zero,
                   ),
                 ),
                 child: Column(
@@ -218,10 +218,6 @@ class _AskAQuestionState extends State<AskAQuestion> {
       child: SafeArea(
         child: Row(
           children: [
-            // IconButton(
-            //   icon: const Icon(Icons.attach_file, color: Colors.grey),
-            //   onPressed: () {},
-            // ),
             Expanded(
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16),

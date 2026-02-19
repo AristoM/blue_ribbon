@@ -28,10 +28,10 @@ class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
 
   final List<Widget> _widgetOptions = <Widget>[
-    MyInstallation(),
-    History(),
-    AskAQuestion(),
-    MenuPage(),
+    const MyInstallation(),
+    const History(),
+    const AskAQuestion(),
+    const MenuPage(),
   ];
 
   static const List<String> _titles = <String>[

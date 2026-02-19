@@ -4,6 +4,7 @@ import 'package:blue_ribbon/data/models/upsell_product.dart';
 import 'package:share_plus/share_plus.dart';
 import 'order.dart';
 import 'package:blue_ribbon/advanced_voice_chat_page.dart';
+import 'package:blue_ribbon/job_chat_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class OrderDetailsPage extends StatefulWidget {
@@ -311,6 +312,18 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                   ),
                 ),
                 const SizedBox(width: 16),
+                IconButton(
+                  icon: const Icon(Icons.chat_bubble_outline,
+                      size: 28, color: Colors.blue),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => JobChatPage(jobId: _order!.id),
+                      ),
+                    );
+                  },
+                ),
                 IconButton(
                   icon: const Icon(Icons.mic, size: 32, color: Colors.blue),
                   onPressed: () {
