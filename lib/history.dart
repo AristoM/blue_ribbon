@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:blue_ribbon/data/services/api_service.dart';
 import 'order.dart';
+import 'order_details_sheet.dart';
 
 class History extends StatefulWidget {
   const History({super.key});
@@ -77,6 +78,18 @@ class _HistoryState extends State<History> {
                           margin: const EdgeInsets.symmetric(
                               horizontal: 24, vertical: 8),
                           child: ListTile(
+                            onTap: () async {
+                              final result = await showModalBottomSheet(
+                                context: context,
+                                isScrollControlled: true,
+                                backgroundColor: Colors.transparent,
+                                builder: (context) =>
+                                    OrderDetailsSheet(order: order),
+                              );
+                              if (result == true) {
+                                _loadPastOrders();
+                              }
+                            },
                             contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 24, vertical: 8),
                             leading: const Icon(Icons.check_circle,

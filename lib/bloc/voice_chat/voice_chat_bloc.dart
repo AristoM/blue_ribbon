@@ -181,9 +181,21 @@ class VoiceChatBloc extends Bloc<VoiceChatEvent, VoiceChatState> {
   }
 
   void _onReceiveChunk(ReceiveChunkEvent event, Emitter<VoiceChatState> emit) {
-    emit(state.copyWith(
-      currentAiResponse: state.currentAiResponse + event.chunk,
-    ));
+    final type = event.chunk['type'];
+    final payload = event.chunk['payload'];
+    String text = '';
+
+    if (type == 'md_content') {
+      text = payload['content'] ?? '';
+    } else if (type == 'text') {
+      text = payload['content'] ?? '';
+    }
+
+    if (text.isNotEmpty) {
+      emit(state.copyWith(
+        currentAiResponse: state.currentAiResponse + text,
+      ));
+    }
   }
 
   void _onStreamComplete(
@@ -246,4 +258,13 @@ class VoiceChatBloc extends Bloc<VoiceChatEvent, VoiceChatState> {
     _flutterTts.stop();
     return super.close();
   }
+}
+
+class ReceiveChunkEvent extends VoiceChatEvent {
+  final Map<String, dynamic> chunk;
+
+  const ReceiveChunkEvent(this.chunk);
+
+  @override
+  List<Object?> get props => [chunk];
 }

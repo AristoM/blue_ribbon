@@ -91,63 +91,28 @@ class ApiService {
     return await _dio.get('/technician/jobs/$jobId');
   }
 
-  Future<Response> getOrderDetails(String orderId) async {
-    return await _dio.get('/orders/$orderId');
+  Future<Response> sendJobChatMessage(String jobId, String message) async {
+    return await _dio.post('/chat/job/$jobId', data: {'message': message});
   }
 
   Future<Response> sendChatMessage(String message) async {
-    try {
-      return await _dio.post('/chat/job/1aca6967-a44e-4cda-a24f-9f4919a1a966',
-          data: {'message': message});
-    } catch (e) {
-      // Mocking the API call locally
-      await Future.delayed(const Duration(seconds: 2));
-
-      return Response(
-        requestOptions: RequestOptions(
-            path: '/chat/job/1aca6967-a44e-4cda-a24f-9f4919a1a966'),
-        statusCode: 200,
-        data: {
-          "success": true,
-          "data": {
-            "job_id": "1aca6967-a44e-4cda-a24f-9f4919a1a966",
-            "message_id": "MSG-AI-002",
-            "response":
-                "For the LG 500L Refrigerator you're installing, the manual specifies:\n\n• Minimum 2 inches (5cm) clearance on both sides",
-            "context_used": {
-              "product_manual": true,
-              "customer_questionnaire": true,
-              "job_details": true
-            },
-            "sources": [
-              {
-                "type": "manual",
-                "page": 12,
-                "section": "Installation Requirements"
-              },
-              {"type": "questionnaire", "field": "space_measurements"}
-            ],
-            "related_suggestions": [
-              "How to level the refrigerator?",
-              "Water line connection steps",
-              "Power requirements"
-            ],
-            "timestamp": DateTime.now().toIso8601String()
-          }
-        },
-      );
-    }
+    // Legacy method, forwarding to a default job ID or could be removed if unused elsewhere
+    return await sendJobChatMessage(
+        '1aca6967-a44e-4cda-a24f-9f4919a1a966', message);
   }
 
   Future<Response> getUpsellProducts(String jobId) async {
     return await _dio.get('/technician/jobs/$jobId/upsell-products');
   }
 
-  Stream<String> streamJobChat(String jobId, String message) async* {
+  Stream<Map<String, dynamic>> streamJobChat(String jobId, String message) async* {
     try {
       final response = await _dio.post(
         '/chat/job/$jobId',
-        data: {'message': message},
+        data: {
+          'message': message,
+          'additionalProperty': 'anything', // Added as per sample request
+        },
         options: Options(responseType: ResponseType.stream),
       );
 
@@ -155,33 +120,54 @@ class ApiService {
       yield* stream
           .transform(utf8.decoder)
           .transform(const LineSplitter())
-          .where((line) => line.startsWith('data: '))
+          .where((line) => line.trim().startsWith('data: '))
           .map((line) {
-        final data = line.substring(6).trim();
-        if (data.contains('[DONE]')) return '';
+        String data = line.trim().substring(6).trim();
+
+        // Handle nested "data: " format
+        while (data.startsWith('data: ')) {
+          data = data.substring(6).trim();
+        }
+
+        if (data == '[DONE]' || data == '[done]') {
+          return {'type': '[done]', 'payload': {}};
+        }
+
         try {
           final decoded = jsonDecode(data);
-          if (decoded is Map && decoded.containsKey('response')) {
-            return decoded['response'] as String;
-          } else if (decoded is Map && decoded.containsKey('text')) {
-            return decoded['text'] as String;
-          } else if (decoded is Map && decoded.containsKey('content')) {
-            return decoded['content'] as String;
+          if (decoded is Map<String, dynamic>) {
+            // If the payload itself contains a 'content' field that is another SSE-like 'data: {...}' string,
+            // we should probably let the UI handle it or parse it recursively if it's consistent.
+            // Based on the sample: data: {"type": "md_content", "payload": {"content": "data: {\"type\": \"status\", ...}"}}
+            // This looks like double wrapping. Let's try to unwrap if it's a string starting with "data: ".
+            if (decoded['type'] == 'md_content' &&
+                decoded['payload'] is Map &&
+                decoded['payload']['content'] is String) {
+              String nestedContent = decoded['payload']['content'];
+              if (nestedContent.trim().startsWith('data: ')) {
+                String nestedData = nestedContent.trim().substring(6).trim();
+                try {
+                  final nestedDecoded = jsonDecode(nestedData);
+                  if (nestedDecoded is Map<String, dynamic>) {
+                    return nestedDecoded;
+                  }
+                } catch (_) {
+                  // Fallback to original decoded if nested fails
+                }
+              }
+            }
+            return decoded;
           }
-          return data;
+          return {'type': 'text', 'payload': {'content': data}};
         } catch (_) {
-          return data;
+          return {'type': 'text', 'payload': {'content': data}};
         }
-      }).where((text) => text.isNotEmpty);
+      });
     } catch (e) {
-      // Mock streaming for development following SSE format
-      const mockResponse = "Service is down. Please try again later.";
-      final chunks = mockResponse.split(' ');
-      for (final chunk in chunks) {
-        await Future.delayed(const Duration(milliseconds: 100));
-        yield "data: $chunk ".substring(
-            6); // Yielding just the content as the real stream map does
-      }
+      yield {
+        'type': 'error',
+        'payload': {'message': e.toString()}
+      };
     }
   }
 }

@@ -108,10 +108,23 @@ class Location {
       String address = '';
       final addr = json['address'];
       if (addr is Map) {
-        address =
-            "${addr['street'] ?? ''}, ${addr['city'] ?? ''}, ${addr['state'] ?? ''} ${addr['zip'] ?? ''}"
-                .trim();
-        if (address == ", ,") address = "";
+        final List<String> parts = [];
+        if (addr['street'] != null && addr['street'].toString().isNotEmpty) {
+          parts.add(addr['street'].toString());
+        }
+        if (addr['city'] != null && addr['city'].toString().isNotEmpty) {
+          parts.add(addr['city'].toString());
+        }
+        if (addr['state'] != null && addr['state'].toString().isNotEmpty) {
+          parts.add(addr['state'].toString());
+        }
+        if (addr['zip'] != null && addr['zip'].toString().isNotEmpty) {
+          parts.add(addr['zip'].toString());
+        }
+        if (addr['country'] != null && addr['country'].toString().isNotEmpty) {
+          parts.add(addr['country'].toString());
+        }
+        address = parts.join(', ');
       } else {
         address = (addr ?? '').toString();
       }

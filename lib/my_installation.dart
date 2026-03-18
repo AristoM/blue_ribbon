@@ -36,7 +36,9 @@ class _MyInstallationState extends State<MyInstallation> {
     try {
       final response = await ApiService().getUpcomingOrders();
       if (response.statusCode == 200 && response.data['success']) {
-        final List jobsJson = response.data['data']['jobs'];
+        final Map<String, dynamic> data = response.data['data'];
+        final List jobsJson = data['jobs'] ?? [];
+        
         setState(() {
           _allJobs = jobsJson.map((json) => Order.fromJson(json)).toList();
           _isLoading = false;
@@ -60,11 +62,13 @@ class _MyInstallationState extends State<MyInstallation> {
 
     // Filter by tab
     if (_selectedTab == JobTab.available) {
-      jobs =
-          jobs.where((job) => job.action?.toLowerCase() == 'offered').toList();
+      jobs = jobs
+          .where((job) => job.action?.trim().toLowerCase() == 'offered')
+          .toList();
     } else {
-      jobs =
-          jobs.where((job) => job.action?.toLowerCase() != 'offered').toList();
+      jobs = jobs
+          .where((job) => job.action?.trim().toLowerCase() != 'offered')
+          .toList();
     }
 
     // Filter by status
@@ -79,14 +83,14 @@ class _MyInstallationState extends State<MyInstallation> {
 
   int get _availableJobsCount {
     return _allJobs
-        .where((job) => job.action?.toLowerCase() == 'offered')
+        .where((job) => job.action?.trim().toLowerCase() == 'offered')
         .toList()
         .length;
   }
 
   int get _allJobsCount {
     return _allJobs
-        .where((job) => job.action?.toLowerCase() != 'offered')
+        .where((job) => job.action?.trim().toLowerCase() != 'offered')
         .toList()
         .length;
   }
@@ -95,7 +99,7 @@ class _MyInstallationState extends State<MyInstallation> {
     return _allJobs
         .where((job) =>
             job.jobStatus == 'IN_PROGRESS' &&
-            job.action?.toLowerCase() != 'offered')
+            job.action?.trim().toLowerCase() != 'offered')
         .toList()
         .length;
   }
@@ -104,7 +108,7 @@ class _MyInstallationState extends State<MyInstallation> {
     return _allJobs
         .where((job) =>
             job.jobStatus == 'COMPLETED' &&
-            job.action?.toLowerCase() != 'offered')
+            job.action?.trim().toLowerCase() != 'offered')
         .toList()
         .length;
   }
@@ -126,11 +130,27 @@ class _MyInstallationState extends State<MyInstallation> {
                       ? Center(child: Text(_error!))
                       : _filteredJobs.isEmpty
                           ? Center(
-                              child: Text(
-                                _selectedTab == JobTab.available
-                                    ? "No available jobs"
-                                    : "No jobs found",
-                                style: TextStyle(color: Colors.grey.shade600),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    _selectedTab == JobTab.available
+                                        ? "No available jobs"
+                                        : "No jobs found",
+                                    style: TextStyle(color: Colors.grey.shade600),
+                                  ),
+                                  if (_selectedTab == JobTab.myJobs && _availableJobsCount > 0) ...[
+                                    const SizedBox(height: 16),
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        setState(() {
+                                          _selectedTab = JobTab.available;
+                                        });
+                                      },
+                                      child: Text("Check Available Jobs ($_availableJobsCount)"),
+                                    ),
+                                  ],
+                                ],
                               ),
                             )
                           : RefreshIndicator(
@@ -379,7 +399,7 @@ class _MyInstallationState extends State<MyInstallation> {
           context: context,
           isScrollControlled: true,
           backgroundColor: Colors.transparent,
-          builder: (context) => OrderDetailsSheet(orderId: job.orderId),
+          builder: (context) => OrderDetailsSheet(order: job),
         );
         if (result == true) {
           _loadOrders();

@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'data/services/api_service.dart';
 import 'advanced_voice_chat_page.dart';
 
 class JobChatPage extends StatefulWidget {
@@ -87,42 +89,141 @@ class _JobChatPageState extends State<JobChatPage> {
     });
   }
 
-  void _handleBotResponse(String userText) {
-    String reply = "I'm processing your request for Job: ${widget.jobId}...";
-    List<String>? options;
-    ChatMessageType type = ChatMessageType.text;
+  void _handleBotResponse(String userText) async {
+    ChatMessage? currentBotMessage;
+    ChatMessage? statusMessage;
 
-    if (userText.toLowerCase().contains("tools")) {
-      reply = "Please select the product type to see required tools:";
-      options = [
-        "WM-500 Refrigerator",
-        "AS-200 Air Conditioner",
-        "TV-900 Smart TV"
-      ];
-      type = ChatMessageType.radio;
-    } else if (userText.toLowerCase().contains("parts")) {
-      reply = "What parts are missing? (Select all that apply)";
-      options = ["Screws", "Brackets", "Power Cord", "User Manual"];
-      type = ChatMessageType.checkbox;
-    } else if (userText.toLowerCase().contains("requirements")) {
-      reply = "Select your current installation status for this job:";
-      options = ["Pre-installation", "In Progress", "Stuck", "Completed"];
-      type = ChatMessageType.dropdown;
+    // Improved status handling
+    void setStatus(String text) {
+      setState(() {
+        // Remove old status message if it exists
+        _messages.remove(statusMessage);
+        
+        statusMessage = ChatMessage(
+          text: text,
+          isUser: false,
+          timestamp: DateTime.now(),
+          type: ChatMessageType.text,
+        );
+        _messages.add(statusMessage!);
+      });
+      _scrollToBottom();
     }
 
-    final botMessage = ChatMessage(
-      text: reply,
-      isUser: false,
-      timestamp: DateTime.now(),
-      type: type,
-      options: options,
-    );
+    void removeStatus() {
+      if (statusMessage != null) {
+        setState(() {
+          _messages.remove(statusMessage);
+          statusMessage = null;
+        });
+      }
+    }
 
-    setState(() {
-      _messages.add(botMessage);
-    });
+    try {
+      final stream = ApiService().streamJobChat(widget.jobId, userText);
+      
+      await for (final chunk in stream) {
+        if (!mounted) break;
+
+        final type = chunk['type'];
+        final payload = chunk['payload'] ?? {};
+
+        if (type == 'status') {
+          setStatus(payload['message'] ?? "Processing...");
+        } else if (type == 'md_content') {
+          removeStatus();
+          final content = payload['content'] ?? "";
+          
+          setState(() {
+            if (currentBotMessage == null) {
+              currentBotMessage = ChatMessage(
+                text: content,
+                isUser: false,
+                timestamp: DateTime.now(),
+                type: ChatMessageType.markdown,
+              );
+              _messages.add(currentBotMessage!);
+            } else {
+              // Append to existing message
+              int index = _messages.indexOf(currentBotMessage!);
+              currentBotMessage = ChatMessage(
+                text: currentBotMessage!.text + content,
+                isUser: false,
+                timestamp: currentBotMessage!.timestamp,
+                type: ChatMessageType.markdown,
+              );
+              if (index != -1) {
+                _messages[index] = currentBotMessage!;
+              }
+            }
+          });
+          _scrollToBottom();
+        } else if (type == 'widget') {
+          removeStatus();
+          final elements = payload['elements'] ?? {};
+          final optionsData = elements['options'] as List? ?? [];
+          final options = optionsData.map((opt) => opt['label'] as String).toList();
+          
+          setState(() {
+            _messages.add(ChatMessage(
+              text: elements['question'] ?? payload['title'] ?? "Please select:",
+              isUser: false,
+              timestamp: DateTime.now(),
+              type: ChatMessageType.radio,
+              options: options,
+            ));
+          });
+          _scrollToBottom();
+        } else if (type == '[done]') {
+          removeStatus();
+          // Handle sources if available in payload
+          final List<dynamic> sources = payload['sources'] ?? [];
+          if (sources.isNotEmpty) {
+            String sourcesText = "\n\n**Sources:**\n" + sources.map((s) => "- ${s['label']}").join("\n");
+             setState(() {
+               if (currentBotMessage != null) {
+                 int index = _messages.indexOf(currentBotMessage!);
+                 currentBotMessage = ChatMessage(
+                   text: currentBotMessage!.text + sourcesText,
+                   isUser: false,
+                   timestamp: currentBotMessage!.timestamp,
+                   type: ChatMessageType.markdown,
+                 );
+                 if (index != -1) {
+                   _messages[index] = currentBotMessage!;
+                 }
+               } else {
+                  _messages.add(ChatMessage(
+                    text: sourcesText,
+                    isUser: false,
+                    timestamp: DateTime.now(),
+                    type: ChatMessageType.markdown,
+                  ));
+               }
+             });
+          }
+        } else if (type == 'error') {
+          removeStatus();
+          _addErrorMessage(payload['message'] ?? "An error occurred");
+        }
+      }
+    } catch (e) {
+      removeStatus();
+      _addErrorMessage("An error occurred: $e");
+    }
+
     _saveHistory();
     _scrollToBottom();
+  }
+
+  void _addErrorMessage(String error) {
+    setState(() {
+      _messages.add(ChatMessage(
+        text: error,
+        isUser: false,
+        timestamp: DateTime.now(),
+      ));
+    });
   }
 
   void _scrollToBottom() {
@@ -292,11 +393,24 @@ class _JobChatPageState extends State<JobChatPage> {
                             offset: const Offset(0, 2)),
                       ],
                     ),
-                    child: Text(message.text,
-                        style: const TextStyle(
-                            color: Colors.black87, fontSize: 16, height: 1.4)),
+                    child: message.type == ChatMessageType.markdown
+                        ? MarkdownBody(
+                            data: message.text,
+                            styleSheet: MarkdownStyleSheet(
+                              p: const TextStyle(
+                                  color: Colors.black87,
+                                  fontSize: 16,
+                                  height: 1.4),
+                            ),
+                          )
+                        : Text(message.text,
+                            style: const TextStyle(
+                                color: Colors.black87,
+                                fontSize: 16,
+                                height: 1.4)),
                   ),
-                  if (message.type != ChatMessageType.text)
+                  if (message.type != ChatMessageType.text &&
+                      message.type != ChatMessageType.markdown)
                     _buildWidget(message),
                 ],
               ),
@@ -497,7 +611,7 @@ class _JobChatPageState extends State<JobChatPage> {
   }
 }
 
-enum ChatMessageType { text, radio, checkbox, dropdown }
+enum ChatMessageType { text, radio, checkbox, dropdown, markdown }
 
 class ChatMessage {
   final String text;

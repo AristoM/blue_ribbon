@@ -7,64 +7,36 @@ import 'package:share_plus/share_plus.dart';
 import 'package:blue_ribbon/job_chat_page.dart';
 
 class OrderDetailsSheet extends StatefulWidget {
-  final String orderId;
+  final Order order;
 
-  const OrderDetailsSheet({super.key, required this.orderId});
+  const OrderDetailsSheet({super.key, required this.order});
 
   @override
   State<OrderDetailsSheet> createState() => _OrderDetailsSheetState();
 }
 
 class _OrderDetailsSheetState extends State<OrderDetailsSheet> {
-  Order? _order;
-  bool _isLoading = true;
+  late Order _order;
+  bool _isLoading = false;
   String? _error;
   List<UpsellProduct> _upsellProducts = [];
 
   @override
   void initState() {
     super.initState();
-    _loadOrder();
-  }
-
-  Future<void> _loadOrder() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-
-    try {
-      final response = await ApiService().getOrderDetails(widget.orderId);
-      if (response.statusCode == 200 && response.data['success']) {
-        final orderData = response.data['data'];
-        setState(() {
-          _order = Order.fromJson(orderData);
-          _isLoading = false;
-        });
-        _loadUpsellProducts(_order!.id);
-      } else {
-        setState(() {
-          _error = "Failed to load order details";
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _error = "An error occurred: $e";
-        _isLoading = false;
-      });
-    }
+    _order = widget.order;
+    _loadUpsellProducts(_order.id);
   }
 
   Future<void> _loadUpsellProducts(String jobId) async {
     // Assuming upsell products might use jobId, but we have orderId mostly.
     // However, Order object has jobId.
-    if (_order?.jobId == null) {
+    if (_order.jobId == null) {
       return;
     }
 
     try {
-      final response = await ApiService().getUpsellProducts(_order!.jobId!);
+      final response = await ApiService().getUpsellProducts(_order.jobId!);
       if (response.statusCode == 200 && response.data['success']) {
         final List<dynamic> productsJson =
             response.data['data']['products'] ?? [];
@@ -90,7 +62,7 @@ class _OrderDetailsSheetState extends State<OrderDetailsSheet> {
       );
     }
 
-    if (_error != null || _order == null) {
+    if (_error != null) {
       return SizedBox(
         height: 400,
         child: Center(child: Text(_error ?? "Order not found")),
@@ -169,7 +141,7 @@ class _OrderDetailsSheetState extends State<OrderDetailsSheet> {
           children: [
             Expanded(
               child: Text(
-                _order!.lineItem.displayName,
+                _order.lineItem.displayName,
                 style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -183,7 +155,7 @@ class _OrderDetailsSheetState extends State<OrderDetailsSheet> {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                _order!.status,
+                _order.status,
                 style: TextStyle(
                   color: Colors.orange.shade800,
                   fontSize: 10,
@@ -196,7 +168,7 @@ class _OrderDetailsSheetState extends State<OrderDetailsSheet> {
         ),
         const SizedBox(height: 8),
         Text(
-          _order!.orderId,
+          _order.orderId,
           style: TextStyle(
             color: Colors.grey.shade500,
             fontSize: 13,
@@ -282,7 +254,7 @@ class _OrderDetailsSheetState extends State<OrderDetailsSheet> {
   }
 
   Widget _buildCustomerNotesSection() {
-    final notes = _order!.customerNotes['special_instructions']?.toString();
+    final notes = _order.customerNotes['special_instructions']?.toString();
     if (notes == null || notes.isEmpty) return const SizedBox.shrink();
 
     return Column(
@@ -332,7 +304,7 @@ class _OrderDetailsSheetState extends State<OrderDetailsSheet> {
     // In the screenshot: Water Supply, Drain Routing, Electrical Setup etc.
     // Let's assume these are keys in the questionnaire_answers map
 
-    final answers = _order!.customerNotes['questionnaire_answers'];
+    final answers = _order.customerNotes['questionnaire_answers'];
     if (answers == null || answers is! Map) {
       return const SizedBox.shrink();
     }
@@ -432,7 +404,7 @@ class _OrderDetailsSheetState extends State<OrderDetailsSheet> {
                   opaque: false,
                   barrierDismissible: true,
                   pageBuilder: (context, _, __) =>
-                      JobChatPage(jobId: _order!.id),
+                      JobChatPage(jobId: _order.id),
                 ),
               );
             })),
@@ -449,8 +421,8 @@ class _OrderDetailsSheetState extends State<OrderDetailsSheet> {
                 child: _buildToolButton(
                     "Product Manual", Icons.description_outlined, () {
               // Open manual URL if exists
-              if (_order!.lineItem.manualUrl.isNotEmpty) {
-                launchUrl(Uri.parse(_order!.lineItem.manualUrl));
+              if (_order.lineItem.manualUrl.isNotEmpty) {
+                launchUrl(Uri.parse(_order.lineItem.manualUrl));
               }
             }, iconColor: Colors.purple)),
             const SizedBox(width: 12),
@@ -672,8 +644,8 @@ class _OrderDetailsSheetState extends State<OrderDetailsSheet> {
           const SizedBox(width: 16),
           FloatingActionButton(
             onPressed: () {
-              if (_order != null && _order!.customer.phone.isNotEmpty) {
-                launchUrl(Uri.parse("tel:${_order!.customer.phone}"));
+              if (_order.customer.phone.isNotEmpty) {
+                launchUrl(Uri.parse("tel:${_order.customer.phone}"));
               }
             },
             backgroundColor: Colors.green,

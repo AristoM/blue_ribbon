@@ -32,7 +32,7 @@ class SendMessageEvent extends VoiceChatEvent {
 }
 
 class ReceiveChunkEvent extends VoiceChatEvent {
-  final String chunk;
+  final Map<String, dynamic> chunk;
 
   const ReceiveChunkEvent(this.chunk);
 
