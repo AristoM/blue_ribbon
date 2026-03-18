@@ -57,6 +57,47 @@ class _MyInstallationState extends State<MyInstallation> {
     }
   }
 
+  Future<void> _acceptJob(String jobId) async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final response = await ApiService().acceptJob(jobId);
+      if (response.statusCode == 200 && response.data['success']) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Job accepted successfully')),
+          );
+          // Switch to My Jobs tab and refresh
+          setState(() {
+            _selectedTab = JobTab.myJobs;
+          });
+          _loadOrders();
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text(response.data['message'] ?? 'Failed to accept job')),
+          );
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('An error occurred: $e')),
+        );
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   List<Order> get _filteredJobs {
     List<Order> jobs = _allJobs;
 
@@ -683,9 +724,7 @@ class _MyInstallationState extends State<MyInstallation> {
               Expanded(
                 flex: 2,
                 child: ElevatedButton(
-                  onPressed: () {
-                    // Handle accept
-                  },
+                  onPressed: () => _acceptJob(job.id),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue.shade700,
                     padding: const EdgeInsets.symmetric(vertical: 14),

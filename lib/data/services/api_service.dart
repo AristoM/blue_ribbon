@@ -91,6 +91,18 @@ class ApiService {
     return await _dio.get('/technician/jobs/$jobId');
   }
 
+  Future<Response> acceptJob(String jobId,
+      {String estimatedArrivalTime = '', String notes = ''}) async {
+    return await _dio.post(
+      '/technician/jobs/$jobId/accept',
+      data: {
+        'estimated_arrival_time': estimatedArrivalTime,
+        'notes': notes,
+        'additionalProperty': 'anything',
+      },
+    );
+  }
+
   Future<Response> sendJobChatMessage(String jobId, String message) async {
     return await _dio.post('/chat/job/$jobId', data: {'message': message});
   }
