@@ -103,6 +103,31 @@ class ApiService {
     );
   }
 
+  Future<Response> startJob(String jobId) async {
+    return await _dio.post('/technician/jobs/$jobId/start');
+  }
+
+  Future<Response> completeJob(String jobId) async {
+    return await _dio.post('/technician/jobs/$jobId/complete');
+  }
+
+  Future<Response> getPhotoVerificationSteps(String jobId) async {
+    return await _dio.get('/technician/jobs/$jobId/photo-verification-steps');
+  }
+
+  Future<Response> verifyPhoto(
+      String jobId, String stepId, String imagePath) async {
+    final formData = FormData.fromMap({
+      'step_id': stepId,
+      'image': await MultipartFile.fromFile(imagePath),
+    });
+
+    return await _dio.post(
+      '/technician/jobs/$jobId/verify-photo',
+      data: formData,
+    );
+  }
+
   Future<Response> sendJobChatMessage(String jobId, String message) async {
     return await _dio.post('/chat/job/$jobId', data: {'message': message});
   }

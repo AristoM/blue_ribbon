@@ -57,7 +57,34 @@ class _MyInstallationState extends State<MyInstallation> {
     }
   }
 
+  Future<bool> _showConfirmDialog(String title, String message) async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(title),
+            content: Text(message),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('CANCEL'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
+
   Future<void> _acceptJob(String jobId) async {
+    final confirmed = await _showConfirmDialog(
+      'Accept Job',
+      'Are you sure you want to accept this job?',
+    );
+    if (!confirmed) return;
+
     setState(() {
       _isLoading = true;
     });

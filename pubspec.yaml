@@ -47,6 +47,8 @@ dependencies:
   status_bar_control: ^3.2.1
   share_plus: ^10.1.4
   url_launcher: ^6.3.1
+  flutter_markdown: ^0.7.7+1
+  image_picker: ^1.1.2
 
 dev_dependencies:
   flutter_test:

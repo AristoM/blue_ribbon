@@ -176,6 +176,49 @@ class Questionnaire {
   }
 }
 
+class OrderNotes {
+  final String specialInstructions;
+  final List<QuestionnaireAnswer> questionnaireAnswers;
+  final List<String> siteImages;
+
+  OrderNotes({
+    required this.specialInstructions,
+    required this.questionnaireAnswers,
+    required this.siteImages,
+  });
+
+  factory OrderNotes.fromJson(Map<String, dynamic> json) {
+    return OrderNotes(
+      specialInstructions: json['special_instructions']?.toString() ?? '',
+      questionnaireAnswers: (json['questionnaire_answers'] as List?)
+              ?.map((e) => QuestionnaireAnswer.fromJson(e))
+              .toList() ??
+          [],
+      siteImages: (json['site_images'] as List?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
+    );
+  }
+}
+
+class QuestionnaireAnswer {
+  final String question;
+  final dynamic answer;
+
+  QuestionnaireAnswer({
+    required this.question,
+    required this.answer,
+  });
+
+  factory QuestionnaireAnswer.fromJson(Map<String, dynamic> json) {
+    return QuestionnaireAnswer(
+      question: json['question']?.toString() ?? '',
+      answer: json['answer'],
+    );
+  }
+}
+
 class Technician {
   final String id;
   final String name;
@@ -341,7 +384,7 @@ class Order {
   final Questionnaire questionnaire;
   final String scheduledTime;
   final Technician technician;
-  final Map<String, dynamic> customerNotes;
+  final OrderNotes notes;
   final Tracking tracking;
   final List<TimelineEvent> timeline;
   final Payment payment;
@@ -364,7 +407,7 @@ class Order {
     required this.questionnaire,
     required this.scheduledTime,
     required this.technician,
-    required this.customerNotes,
+    required this.notes,
     required this.tracking,
     required this.timeline,
     required this.payment,
@@ -402,12 +445,15 @@ class Order {
                     phone: '',
                     rating: 0,
                     photoUrl: ''),
-        customerNotes: json['customer_notes'] is Map
-            ? json['customer_notes']
-            : {
-                'special_instructions':
-                    (json['customer_notes'] ?? '').toString()
-              },
+        notes: json['notes'] != null
+            ? OrderNotes.fromJson(json['notes'])
+            : (json['customer_notes'] is Map
+                ? OrderNotes.fromJson(json['customer_notes'])
+                : OrderNotes(
+                    specialInstructions:
+                        (json['customer_notes'] ?? '').toString(),
+                    questionnaireAnswers: [],
+                    siteImages: [])),
         tracking: json['tracking'] != null
             ? Tracking.fromJson(json['tracking'])
             : Tracking(
@@ -437,5 +483,54 @@ class Order {
       print('Failed JSON: $json');
       rethrow;
     }
+  }
+
+  Order copyWith({
+    String? id,
+    String? orderId,
+    String? jobId,
+    String? historyId,
+    String? status,
+    String? action,
+    String? jobStatus,
+    LineItem? lineItem,
+    Customer? customer,
+    Location? location,
+    Questionnaire? questionnaire,
+    String? scheduledTime,
+    Technician? technician,
+    OrderNotes? notes,
+    Tracking? tracking,
+    List<TimelineEvent>? timeline,
+    Payment? payment,
+    int? estimatedDurationHours,
+    DateTime? assignedAt,
+    double? paymentAmount,
+    bool? isPast,
+  }) {
+    return Order(
+      id: id ?? this.id,
+      orderId: orderId ?? this.orderId,
+      jobId: jobId ?? this.jobId,
+      historyId: historyId ?? this.historyId,
+      status: status ?? this.status,
+      action: action ?? this.action,
+      jobStatus: jobStatus ?? this.jobStatus,
+      lineItem: lineItem ?? this.lineItem,
+      customer: customer ?? this.customer,
+      location: location ?? this.location,
+      questionnaire: questionnaire ?? this.questionnaire,
+      scheduledTime: scheduledTime ?? this.scheduledTime,
+      technician: technician ?? this.technician,
+      notes: notes ?? this.notes,
+      tracking: tracking ?? this.tracking,
+      timeline: timeline ?? this.timeline,
+      payment: payment ?? this.payment,
+      estimatedDurationHours:
+          estimatedDurationHours ?? this.estimatedDurationHours,
+      assignedAt: assignedAt ?? this.assignedAt,
+      paymentAmount: paymentAmount ?? this.paymentAmount,
+      isPast: isPast ?? this.isPast,
+    );
   }
 }

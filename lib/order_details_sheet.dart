@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:blue_ribbon/data/services/api_service.dart';
 import 'package:blue_ribbon/order.dart';
+import 'package:blue_ribbon/photo_verification_page.dart';
 import 'package:blue_ribbon/data/models/upsell_product.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:blue_ribbon/job_chat_page.dart';
+import 'package:blue_ribbon/data/services/settings_service.dart';
 
 class OrderDetailsSheet extends StatefulWidget {
   final Order order;
@@ -20,12 +22,23 @@ class _OrderDetailsSheetState extends State<OrderDetailsSheet> {
   bool _isLoading = false;
   String? _error;
   List<UpsellProduct> _upsellProducts = [];
+  String _baseUrl = '';
 
   @override
   void initState() {
     super.initState();
+    _loadBaseUrl();
     _order = widget.order;
     _loadUpsellProducts(_order.id);
+  }
+
+  Future<void> _loadBaseUrl() async {
+    final baseUrl = await SettingsService.getBaseUrl();
+    if (mounted) {
+      setState(() {
+        _baseUrl = baseUrl.replaceAll('/api/v1', '');
+      });
+    }
   }
 
   Future<void> _loadUpsellProducts(String jobId) async {
@@ -50,6 +63,118 @@ class _OrderDetailsSheetState extends State<OrderDetailsSheet> {
       }
     } catch (e) {
       // Ignore errors for upsell products
+    }
+  }
+
+  Future<bool> _showConfirmDialog(String title, String message) async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(title),
+            content: Text(message),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('CANCEL'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
+
+  Future<void> _startJob() async {
+    final confirmed = await _showConfirmDialog(
+      'Start Job',
+      'Are you sure you want to start this job?',
+    );
+    if (!confirmed) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final response = await ApiService().startJob(_order.id);
+      if (response.statusCode == 200 && response.data['success']) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Job started successfully')),
+          );
+          if (mounted) {
+            Navigator.pop(context, true);
+          }
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text(response.data['message'] ?? 'Failed to start job')),
+          );
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('An error occurred: $e')),
+        );
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _completeJob() async {
+    final confirmed = await _showConfirmDialog(
+      'Complete Job',
+      'Are you sure you want to complete this job?',
+    );
+    if (!confirmed) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final response = await ApiService().completeJob(_order.id);
+      if (response.statusCode == 200 && response.data['success']) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Job completed successfully')),
+          );
+          if (mounted) {
+            Navigator.pop(context, true);
+          }
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content:
+                    Text(response.data['message'] ?? 'Failed to complete job')),
+          );
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('An error occurred: $e')),
+        );
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -83,7 +208,7 @@ class _OrderDetailsSheetState extends State<OrderDetailsSheet> {
             children: [
               ListView(
                 controller: controller,
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 180),
                 children: [
                   Center(
                     child: Container(
@@ -180,6 +305,9 @@ class _OrderDetailsSheetState extends State<OrderDetailsSheet> {
   }
 
   Widget _buildSitePhotosSection() {
+    final images = _order.notes.siteImages;
+    if (images.isEmpty) return const SizedBox.shrink();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -187,9 +315,9 @@ class _OrderDetailsSheetState extends State<OrderDetailsSheet> {
           children: [
             Icon(Icons.image_outlined, size: 20, color: Colors.blue.shade700),
             const SizedBox(width: 8),
-            const Text(
-              "SITE PHOTOS (2)",
-              style: TextStyle(
+            Text(
+              "SITE PHOTOS (${images.length})",
+              style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
               ),
@@ -199,35 +327,40 @@ class _OrderDetailsSheetState extends State<OrderDetailsSheet> {
         const SizedBox(height: 16),
         SizedBox(
           height: 200,
-          child: ListView(
+          child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            children: [
-              _buildPhotoPlaceholder(),
-              const SizedBox(width: 12),
-              _buildPhotoPlaceholder(),
-            ],
+            itemCount: images.length,
+            itemBuilder: (context, index) => Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: _buildPhotoPlaceholder(images[index]),
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildPhotoPlaceholder() {
+  Widget _buildPhotoPlaceholder(String imageUrl) {
+    final String fullImageUrl = imageUrl.startsWith('http')
+        ? imageUrl
+        : '$_baseUrl$imageUrl';
+
     return Container(
       width: 300,
       decoration: BoxDecoration(
         color: Colors.grey.shade200,
         borderRadius: BorderRadius.circular(12),
-        image: const DecorationImage(
-          image: NetworkImage('https://placehold.co/600x400/png'),
+        image: DecorationImage(
+          image: NetworkImage(fullImageUrl),
           fit: BoxFit.cover,
         ),
       ),
       child: Stack(
         children: [
-          Center(
-            child: Icon(Icons.image, size: 40, color: Colors.grey.shade400),
-          ),
+          if (!imageUrl.startsWith('http'))
+            Center(
+              child: Icon(Icons.image, size: 40, color: Colors.grey.shade400),
+            ),
           Positioned(
             bottom: 10,
             right: 10,
@@ -254,8 +387,8 @@ class _OrderDetailsSheetState extends State<OrderDetailsSheet> {
   }
 
   Widget _buildCustomerNotesSection() {
-    final notes = _order.customerNotes['special_instructions']?.toString();
-    if (notes == null || notes.isEmpty) return const SizedBox.shrink();
+    final notes = _order.notes.specialInstructions;
+    if (notes.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -297,15 +430,8 @@ class _OrderDetailsSheetState extends State<OrderDetailsSheet> {
   }
 
   Widget _buildQuestionnaireSection() {
-    // Parsing questionnaire answers from customerNotes if possible
-    // The JSON structure says customer_notes: { questionnaire_answers: ... }
-    // Order model puts this into customerNotes map.
-
-    // In the screenshot: Water Supply, Drain Routing, Electrical Setup etc.
-    // Let's assume these are keys in the questionnaire_answers map
-
-    final answers = _order.customerNotes['questionnaire_answers'];
-    if (answers == null || answers is! Map) {
+    final answers = _order.notes.questionnaireAnswers;
+    if (answers.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -333,8 +459,8 @@ class _OrderDetailsSheetState extends State<OrderDetailsSheet> {
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
-            children: (answers as Map<String, dynamic>).entries.map((entry) {
-              return _buildQuestionnaireRow(entry.key, entry.value.toString());
+            children: answers.map((entry) {
+              return _buildQuestionnaireRow(entry.question, entry.answer.toString());
             }).toList(),
           ),
         ),
@@ -354,20 +480,28 @@ class _OrderDetailsSheetState extends State<OrderDetailsSheet> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            formattedLabel,
-            style: TextStyle(
-              color: Colors.grey.shade600,
-              fontSize: 14,
+          Expanded(
+            flex: 2,
+            child: Text(
+              formattedLabel,
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 14,
+              ),
             ),
           ),
-          Text(
-            value,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
+          const SizedBox(width: 16),
+          Expanded(
+            flex: 1,
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
             ),
           ),
         ],
@@ -464,7 +598,18 @@ class _OrderDetailsSheetState extends State<OrderDetailsSheet> {
 
   Widget _buildPhotoVerifyButton() {
     return ElevatedButton.icon(
-      onPressed: () {},
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PhotoVerificationPage(
+              jobId: _order.id,
+              orderName: _order.lineItem.displayName,
+              modelNumber: _order.lineItem.sku,
+            ),
+          ),
+        );
+      },
       icon: const Icon(Icons.camera_alt_outlined, color: Colors.white),
       label: const Text(
         "Photo Verify",
@@ -613,6 +758,11 @@ class _OrderDetailsSheetState extends State<OrderDetailsSheet> {
   }
 
   Widget _buildBottomBar() {
+    final bool canStart =
+        _order.jobStatus == 'PENDING' || _order.jobStatus == 'ASSIGNED';
+    final bool canComplete = _order.jobStatus == 'IN_PROGRESS';
+    final bool showActionButton = canStart || canComplete;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -625,32 +775,62 @@ class _OrderDetailsSheetState extends State<OrderDetailsSheet> {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: () {},
-              icon: const Icon(Icons.chat_bubble_outline),
-              label: const Text("Chat with Customer"),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {},
+                  icon: const Icon(Icons.chat_bubble_outline),
+                  label: const Text("Chat with Customer"),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    side: BorderSide(color: Colors.grey.shade300),
+                  ),
                 ),
-                side: BorderSide(color: Colors.grey.shade300),
+              ),
+              const SizedBox(width: 16),
+              FloatingActionButton(
+                onPressed: () {
+                  if (_order.customer.phone.isNotEmpty) {
+                    launchUrl(Uri.parse("tel:${_order.customer.phone}"));
+                  }
+                },
+                backgroundColor: Colors.green,
+                child: const Icon(Icons.phone, color: Colors.white),
+              ),
+            ],
+          ),
+          if (showActionButton) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: canStart ? _startJob : _completeJob,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor:
+                      canStart ? Colors.blue.shade700 : Colors.green.shade700,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+                child: Text(
+                  canStart ? "Start Job" : "Complete",
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 16),
-          FloatingActionButton(
-            onPressed: () {
-              if (_order.customer.phone.isNotEmpty) {
-                launchUrl(Uri.parse("tel:${_order.customer.phone}"));
-              }
-            },
-            backgroundColor: Colors.green,
-            child: const Icon(Icons.phone, color: Colors.white),
-          ),
+          ],
         ],
       ),
     );
