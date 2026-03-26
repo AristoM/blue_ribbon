@@ -37,7 +37,7 @@ class _PhotoVerificationPageState extends State<PhotoVerificationPage> {
 
   Future<void> _fetchSteps() async {
     try {
-      final response = await _apiService.getPhotoVerificationSteps(widget.jobId);
+      final response = await _apiService.getVerificationPrerequisites(widget.jobId);
       if (response.statusCode == 200 && response.data['success']) {
         final List stepsJson = response.data['data']['steps'] ?? [];
         setState(() {
@@ -104,14 +104,16 @@ class _PhotoVerificationPageState extends State<PhotoVerificationPage> {
         final resultJson = response.data['data'];
         setState(() {
           step.result = PhotoVerificationResult.fromJson(resultJson);
-          step.status = step.result!.issueCode != null 
-              ? VerificationStatus.issue 
-              : VerificationStatus.success;
+          step.status = step.result!.status == 'pass'
+              ? VerificationStatus.success
+              : VerificationStatus.issue;
         });
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(response.data['message'] ?? 'Analysis failed')),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(response.data['message'] ?? 'Analysis failed')),
+          );
+        }
         setState(() {
           step.status = VerificationStatus.pending;
         });
@@ -128,6 +130,7 @@ class _PhotoVerificationPageState extends State<PhotoVerificationPage> {
       setState(() {
         step.result = PhotoVerificationResult(
           confidenceScore: 0.9,
+          status: 'fail',
           issueCode: 'DW-W-001',
           issueTitle: 'Kinked Water Line Detected',
           issueDescription: 'The dishwasher drain hose appears to be kinked or sharply bent, which can impede water flow and cause drainage issues.',
@@ -163,8 +166,11 @@ class _PhotoVerificationPageState extends State<PhotoVerificationPage> {
           ? const Center(child: CircularProgressIndicator())
           : _error != null
               ? Center(child: Text(_error!))
-              : Column(
-                  children: [
+              : _steps.isEmpty
+                  ? const Center(
+                      child: Text("No verification steps available for this job."))
+                  : Column(
+                      children: [
                     _buildTopInfo(),
                     _buildProgressBar(),
                     _buildStepSelector(),
@@ -300,10 +306,63 @@ class _PhotoVerificationPageState extends State<PhotoVerificationPage> {
             Expanded(child: _buildCapturedImageCard(step)),
           ],
         ),
+        if (step.checks.isNotEmpty) _buildChecksSection(step.checks),
         if (step.status == VerificationStatus.analyzing) _buildAnalyzingState(),
         if (step.status == VerificationStatus.issue) _buildIssueState(step),
         if (step.status == VerificationStatus.success) _buildSuccessState(step),
       ],
+    );
+  }
+
+  Widget _buildChecksSection(List<String> checks) {
+    return Container(
+      margin: const EdgeInsets.only(top: 20),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.blue.shade100),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.fact_check_outlined, size: 18, color: Colors.blue.shade700),
+              const SizedBox(width: 8),
+              Text(
+                'MANDATORY CHECKS',
+                style: TextStyle(
+                  color: Colors.blue.shade900,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...checks.map((check) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.check_circle_outline, size: 16, color: Colors.blue.shade400),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    check,
+                    style: TextStyle(
+                      color: Colors.blue.shade900.withOpacity(0.8),
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )),
+        ],
+      ),
     );
   }
 
@@ -547,7 +606,7 @@ class _PhotoVerificationPageState extends State<PhotoVerificationPage> {
                 ],
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );

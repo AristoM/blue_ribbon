@@ -6,7 +6,6 @@ import 'settings_service.dart';
 class ApiService {
   static final ApiService _instance = ApiService._internal();
   late Dio _dio;
-  bool _initialized = false;
 
   factory ApiService() {
     return _instance;
@@ -39,7 +38,6 @@ class ApiService {
 
   /// Force refresh the Dio instance with the latest Base URL
   void reset() {
-    _initialized = false;
     _dio.options.baseUrl = ''; // Trigger reload on next request
   }
 
@@ -115,15 +113,18 @@ class ApiService {
     return await _dio.get('/technician/jobs/$jobId/photo-verification-steps');
   }
 
+  Future<Response> getVerificationPrerequisites(String jobId) async {
+    return await _dio.get('/technician/jobs/$jobId/verification-prerequisites');
+  }
+
   Future<Response> verifyPhoto(
       String jobId, String stepId, String imagePath) async {
     final formData = FormData.fromMap({
-      'step_id': stepId,
-      'image': await MultipartFile.fromFile(imagePath),
+      'file': await MultipartFile.fromFile(imagePath),
     });
-
     return await _dio.post(
       '/technician/jobs/$jobId/verify-photo',
+      queryParameters: {'step_id': stepId},
       data: formData,
     );
   }
