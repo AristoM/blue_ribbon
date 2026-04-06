@@ -133,17 +133,63 @@ class _OrderDetailsSheetState extends State<OrderDetailsSheet> {
   }
 
   Future<void> _completeJob() async {
-    final confirmed = await _showConfirmDialog(
-      'Complete Job',
-      'Are you sure you want to complete this job?',
-    );
-    if (!confirmed) return;
-
     setState(() {
       _isLoading = true;
     });
 
     try {
+      // Check if photo verification is completed
+      final verificationResponse =
+          await ApiService().getVerificationPrerequisites(_order.id);
+      bool isVerified = false;
+      if (verificationResponse.statusCode == 200 &&
+          verificationResponse.data['success']) {
+        final List stepsJson = verificationResponse.data['data']['steps'] ?? [];
+        if (stepsJson.isEmpty) {
+          isVerified = true; // No steps means nothing to verify
+        } else {
+          isVerified = stepsJson.every((j) => j['status'] == 'success');
+        }
+      }
+
+      if (!isVerified) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+          final confirm = await _showConfirmDialog(
+            'Photo Verification Pending',
+            'Some photo verification steps are still pending. Would you like to complete verification now?',
+          );
+          if (confirm && mounted) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => PhotoVerificationPage(
+                  jobId: _order.id,
+                  orderName: _order.lineItem.displayName,
+                  modelNumber: _order.lineItem.sku,
+                ),
+              ),
+            ).then((_) {
+              if (mounted) _completeJob();
+            }); // Retry after returning from verification
+          }
+        }
+        return;
+      }
+
+      final confirmed = await _showConfirmDialog(
+        'Complete Job',
+        'Are you sure you want to complete this job?',
+      );
+      if (!confirmed) {
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+
       final response = await ApiService().completeJob(_order.id);
       if (response.statusCode == 200 && response.data['success']) {
         if (mounted) {

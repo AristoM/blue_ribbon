@@ -439,6 +439,25 @@ class _PhotoVerificationPageState extends State<PhotoVerificationPage> {
     return Stack(
       children: [
         _buildImageCard(label, step.capturedImagePath!, isUrl: false),
+        Positioned(
+          top: 8,
+          right: 8,
+          child: GestureDetector(
+            onTap: _capturePhoto,
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.5),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.edit,
+                color: Colors.white,
+                size: 16,
+              ),
+            ),
+          ),
+        ),
         if (step.status == VerificationStatus.issue)
           Positioned.fill(
             child: Container(

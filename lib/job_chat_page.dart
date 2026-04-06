@@ -164,13 +164,24 @@ class _JobChatPageState extends State<JobChatPage> {
           final optionsData = elements['options'] as List? ?? [];
           final options = optionsData.map((opt) => opt['label'] as String).toList();
           
+          final widgetTypeStr = elements['type'] as String? ?? 'radio';
+          ChatMessageType widgetType = ChatMessageType.radio;
+          if (widgetTypeStr == 'checkbox') {
+            widgetType = ChatMessageType.checkbox;
+          } else if (widgetTypeStr == 'dropdown') {
+            widgetType = ChatMessageType.dropdown;
+          }
+
+          final submitLabel = elements['submit_label'] ?? elements['submit_lable'] ?? "Submit Selection";
+
           setState(() {
             _messages.add(ChatMessage(
               text: elements['question'] ?? payload['title'] ?? "Please select:",
               isUser: false,
               timestamp: DateTime.now(),
-              type: ChatMessageType.radio,
+              type: widgetType,
               options: options,
+              submitLabel: submitLabel,
             ));
           });
           _scrollToBottom();
@@ -473,42 +484,85 @@ class _JobChatPageState extends State<JobChatPage> {
   Widget _buildCheckboxWidget(ChatMessage message) {
     if (message.isSubmitted) return const SizedBox.shrink();
     message.selectedValues ??= [];
+    
     return Container(
       margin: const EdgeInsets.only(top: 12),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
-      child: Column(
-        children: [
-          ...message.options!.map((opt) {
-            return CheckboxListTile(
-              title: Text(opt),
-              value: message.selectedValues!.contains(opt),
-              onChanged: (val) {
-                setState(() {
-                  if (val!) {
-                    message.selectedValues!.add(opt);
-                  } else {
-                    message.selectedValues!.remove(opt);
-                  }
-                });
-              },
-            );
-          }),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: ElevatedButton(
-              onPressed: () {
-                setState(() => message.isSubmitted = true);
-                _sendMessage(
-                    text: "Submitted: ${message.selectedValues!.join(', ')}");
-              },
-              child: const Text("Submit Selection"),
-            ),
-          )
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blueAccent.withOpacity(0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
         ],
+        border: Border.all(color: Colors.blueAccent.withOpacity(0.1)),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Column(
+          children: [
+            ...message.options!.map((opt) {
+              final isSelected = message.selectedValues!.contains(opt);
+              return Container(
+                decoration: BoxDecoration(
+                  color: isSelected ? Colors.blue.withOpacity(0.05) : Colors.transparent,
+                  border: Border(bottom: BorderSide(color: Colors.grey[100]!, width: 0.5)),
+                ),
+                child: CheckboxListTile(
+                  title: Text(
+                    opt,
+                    style: TextStyle(
+                      color: isSelected ? Colors.blueAccent : Colors.black87,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                      fontSize: 15,
+                    ),
+                  ),
+                  value: isSelected,
+                  activeColor: Colors.blueAccent,
+                  checkColor: Colors.white,
+                  dense: true,
+                  onChanged: (val) {
+                    setState(() {
+                      if (val!) {
+                        message.selectedValues!.add(opt);
+                      } else {
+                        message.selectedValues!.remove(opt);
+                      }
+                    });
+                  },
+                  controlAffinity: ListTileControlAffinity.leading,
+                ),
+              );
+            }),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: message.selectedValues!.isEmpty ? null : () {
+                    setState(() => message.isSubmitted = true);
+                    _sendMessage(
+                        text: "Submitted: ${message.selectedValues!.join(', ')}");
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blueAccent,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: Colors.grey[200],
+                    shape: const StadiumBorder(),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    message.submitLabel ?? "Submit Selection",
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  ),
+                ),
+              ),
+            )
+          ],
+        ),
       ),
     );
   }
@@ -622,6 +676,7 @@ class ChatMessage {
   String? selectedValue;
   List<String>? selectedValues;
   bool isSubmitted;
+  String? submitLabel;
 
   ChatMessage({
     required this.text,
@@ -632,6 +687,7 @@ class ChatMessage {
     this.selectedValue,
     this.selectedValues,
     this.isSubmitted = false,
+    this.submitLabel,
   });
 
   Map<String, dynamic> toJson() => {
@@ -643,6 +699,7 @@ class ChatMessage {
         'selectedValue': selectedValue,
         'selectedValues': selectedValues,
         'isSubmitted': isSubmitted,
+        'submitLabel': submitLabel,
       };
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) => ChatMessage(
@@ -657,5 +714,6 @@ class ChatMessage {
             ? List<String>.from(json['selectedValues'])
             : null,
         isSubmitted: json['isSubmitted'] ?? false,
+        submitLabel: json['submitLabel'],
       );
 }

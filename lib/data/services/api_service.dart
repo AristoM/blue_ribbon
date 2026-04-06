@@ -126,6 +126,10 @@ class ApiService {
       '/technician/jobs/$jobId/verify-photo',
       queryParameters: {'step_id': stepId},
       data: formData,
+      options: Options(
+        sendTimeout: const Duration(seconds: 30),
+        receiveTimeout: const Duration(minutes: 5), // Added long timeout as per user request to wait for server-side processing/debugging
+      ),
     );
   }
 
@@ -151,7 +155,11 @@ class ApiService {
           'message': message,
           'additionalProperty': 'anything', // Added as per sample request
         },
-        options: Options(responseType: ResponseType.stream),
+        options: Options(
+          responseType: ResponseType.stream,
+          sendTimeout: const Duration(seconds: 30),
+          receiveTimeout: const Duration(minutes: 5), // Added long timeout for AI streaming
+        ),
       );
 
       final stream = (response.data.stream as Stream).cast<List<int>>();
